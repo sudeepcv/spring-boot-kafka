@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8
+    container_name: microservice-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: sudeep
+      MYSQL_DATABASE: wikimedia
+    volumes:
+      - ./init:/docker-entrypoint-initdb.d
+    networks:
+      - mynetwork
+    ports:
+      - 3306:3306
+    expose:
+      - 3306
+
+  zookeeper:
+    image: zookeeper:3.5.9
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    expose:
+      - 2181
+    restart: always
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - mynetwork
+
+  kafka:
+    image: confluentinc/cp-kafka:6.0.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    expose:
+      - 9092
+    restart: always
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    networks:
+      - mynetwork
+  kafka-producer-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile-kafka-producer-consumer
+    networks:
+      - mynetwork
+    restart: on-failure
+    ports:
+      - 8080:8080
+    expose:
+      - 8080
+
+networks:
+  mynetwork:
+    driver: bridge
